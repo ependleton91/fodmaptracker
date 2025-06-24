@@ -147,6 +147,10 @@
             const [completedMeals, setCompletedMeals] = useState({});
             const [groceryChecklist, setGroceryChecklist] = useState({});
             const [activeTab, setActiveTab] = useState('today');
+            const [customGroceryList, setCustomGroceryList] = useState([]);
+            const [customMealPlans, setCustomMealPlans] = useState({});
+            const [showAddGroceryItem, setShowAddGroceryItem] = useState(false);
+            const [showEditMeal, setShowEditMeal] = useState(null);
 
             // Load data from localStorage
             useEffect(() => {
@@ -160,6 +164,8 @@
                         if (parsed.currentPhase) setCurrentPhase(parsed.currentPhase);
                         if (parsed.currentWeek) setCurrentWeek(parsed.currentWeek);
                         if (parsed.currentDay) setCurrentDay(parsed.currentDay);
+                        if (parsed.customGroceryList) setCustomGroceryList(parsed.customGroceryList);
+                        if (parsed.customMealPlans) setCustomMealPlans(parsed.customMealPlans);
                     }
                 } catch (error) {
                     console.error('Error loading data:', error);
@@ -176,13 +182,15 @@
                         currentPhase,
                         currentWeek,
                         currentDay,
+                        customGroceryList,
+                        customMealPlans,
                         lastUpdated: new Date().toISOString()
                     };
                     localStorage.setItem('fodmapTracker', JSON.stringify(dataToSave));
                 } catch (error) {
                     console.error('Error saving data:', error);
                 }
-            }, [symptoms, completedMeals, groceryChecklist, currentPhase, currentWeek, currentDay]);
+            }, [symptoms, completedMeals, groceryChecklist, currentPhase, currentWeek, currentDay, customGroceryList, customMealPlans]);
 
             // Data
             const mealPlans = {
@@ -290,7 +298,59 @@
 
             const getCurrentDayMeals = () => {
                 const dayKey = ((currentDay - 1) % 7) + 1;
+                // Check if there are custom meals for this day, otherwise use default
+                if (customMealPlans[dayKey]) {
+                    return customMealPlans[dayKey];
+                }
                 return mealPlans[dayKey] || mealPlans[1];
+            };
+
+            const getAllGroceryItems = () => {
+                // Combine default grocery list with custom items
+                const allItems = [...groceryList];
+                if (customGroceryList.length > 0) {
+                    allItems.push({
+                        category: "Custom Items",
+                        items: customGroceryList
+                    });
+                }
+                return allItems;
+            };
+
+            const addCustomGroceryItem = (item) => {
+                if (item.trim()) {
+                    setCustomGroceryList(prev => [...prev, item.trim()]);
+                    setShowAddGroceryItem(false);
+                }
+            };
+
+            const removeCustomGroceryItem = (itemToRemove) => {
+                setCustomGroceryList(prev => prev.filter(item => item !== itemToRemove));
+                // Also remove it from the checklist
+                const key = `Custom Items-${itemToRemove}`;
+                setGroceryChecklist(prev => {
+                    const newChecklist = { ...prev };
+                    delete newChecklist[key];
+                    return newChecklist;
+                });
+            };
+
+            const updateMealPlan = (dayKey, mealType, newValue) => {
+                setCustomMealPlans(prev => ({
+                    ...prev,
+                    [dayKey]: {
+                        ...prev[dayKey] || mealPlans[dayKey],
+                        [mealType]: newValue
+                    }
+                }));
+            };
+
+            const resetMealPlan = (dayKey) => {
+                setCustomMealPlans(prev => {
+                    const newPlans = { ...prev };
+                    delete newPlans[dayKey];
+                    return newPlans;
+                });
             };
 
             const getSymptomHistory = () => {
@@ -331,12 +391,44 @@
                     setCurrentPhase('elimination');
                     setCurrentWeek(1);
                     setCurrentDay(1);
+                    setCustomGroceryList([]);
+                    setCustomMealPlans({});
                 }
+            };
+
+            // Add new icon for editing
+            Icons.Edit = function({ size = 16 }) {
+                return React.createElement('svg', {
+                    width: size,
+                    height: size,
+                    viewBox: '0 0 24 24',
+                    fill: 'none',
+                    stroke: 'currentColor',
+                    strokeWidth: 2
+                }, [
+                    React.createElement('path', { key: 'path', d: 'm18 2 4 4-16 16H2v-4L18 2z' })
+                ]);
+            };
+
+            Icons.X = function({ size = 16 }) {
+                return React.createElement('svg', {
+                    width: size,
+                    height: size,
+                    viewBox: '0 0 24 24',
+                    fill: 'none',
+                    stroke: 'currentColor',
+                    strokeWidth: 2
+                }, [
+                    React.createElement('line', { key: 'line1', x1: 18, y1: 6, x2: 6, y2: 18 }),
+                    React.createElement('line', { key: 'line2', x1: 6, y1: 6, x2: 18, y2: 18 })
+                ]);
             };
 
             // Render functions
             const renderTodayTab = () => {
                 const meals = getCurrentDayMeals();
+                const dayKey = ((currentDay - 1) % 7) + 1;
+                
                 return (
                     <div className="space-y-6">
                         <div className="bg-blue-50 p-4 rounded-lg">
@@ -352,36 +444,107 @@
                         </div>
                         
                         <div className="space-y-4">
-                            <h3 className="font-semibold text-gray-800">Today's Meals</h3>
+                            <div className="flex justify-between items-center">
+                                <h3 className="font-semibold text-gray-800">Today's Meals</h3>
+                                <button
+                                    onClick={() => setShowEditMeal(showEditMeal ? null : dayKey)}
+                                    className="text-blue-600 text-sm flex items-center"
+                                >
+                                    <Icons.Edit size={14} className="mr-1" />
+                                    {showEditMeal ? 'Done' : 'Edit Meals'}
+                                </button>
+                            </div>
+                            
                             {['breakfast', 'lunch', 'dinner'].map(mealType => (
                                 <div key={mealType} className="border rounded-lg p-4">
                                     <div className="flex items-center justify-between mb-2">
                                         <h4 className="font-medium capitalize text-gray-700">{mealType}</h4>
                                         <button onClick={() => toggleMeal(mealType)} className="text-green-600">
                                             {completedMeals[`day${currentDay}-${mealType}`] ? 
-                                                <Icons.CheckCircle size={20} /> : <Icons.Circle size={20} />
+                                                React.createElement(Icons.CheckCircle, { size: 20 }) : 
+                                                React.createElement(Icons.Circle, { size: 20 })
                                             }
                                         </button>
                                     </div>
-                                    <p className="text-sm text-gray-600">{meals[mealType]}</p>
+                                    {showEditMeal === dayKey ? (
+                                        <div className="space-y-2">
+                                            <textarea
+                                                value={meals[mealType]}
+                                                onChange={(e) => updateMealPlan(dayKey, mealType, e.target.value)}
+                                                className="w-full p-2 border rounded text-sm"
+                                                rows="2"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-600">{meals[mealType]}</p>
+                                    )}
                                 </div>
                             ))}
                             
                             <div className="border rounded-lg p-4">
                                 <h4 className="font-medium text-gray-700 mb-2">Snacks</h4>
-                                <ul className="text-sm text-gray-600 space-y-1">
-                                    {meals.snacks?.map((snack, idx) => (
-                                        <li key={idx} className="flex items-center">
-                                            <button onClick={() => toggleMeal(`snack${idx}`)} className="text-green-600 mr-2">
-                                                {completedMeals[`day${currentDay}-snack${idx}`] ? 
-                                                    <Icons.CheckCircle size={16} /> : <Icons.Circle size={16} />
-                                                }
-                                            </button>
-                                            {snack}
-                                        </li>
-                                    ))}
-                                </ul>
+                                {showEditMeal === dayKey ? (
+                                    <div className="space-y-2">
+                                        {meals.snacks?.map((snack, idx) => (
+                                            <div key={idx} className="flex items-center gap-2">
+                                                <input
+                                                    value={snack}
+                                                    onChange={(e) => {
+                                                        const newSnacks = [...meals.snacks];
+                                                        newSnacks[idx] = e.target.value;
+                                                        updateMealPlan(dayKey, 'snacks', newSnacks);
+                                                    }}
+                                                    className="flex-1 p-1 border rounded text-sm"
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const newSnacks = meals.snacks.filter((_, i) => i !== idx);
+                                                        updateMealPlan(dayKey, 'snacks', newSnacks);
+                                                    }}
+                                                    className="text-red-600"
+                                                >
+                                                    <Icons.X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => {
+                                                const newSnacks = [...(meals.snacks || []), 'New snack'];
+                                                updateMealPlan(dayKey, 'snacks', newSnacks);
+                                            }}
+                                            className="text-blue-600 text-sm flex items-center"
+                                        >
+                                            <Icons.Plus size={14} className="mr-1" />
+                                            Add Snack
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <ul className="text-sm text-gray-600 space-y-1">
+                                        {meals.snacks?.map((snack, idx) => (
+                                            <li key={idx} className="flex items-center">
+                                                <button onClick={() => toggleMeal(`snack${idx}`)} className="text-green-600 mr-2">
+                                                    {completedMeals[`day${currentDay}-snack${idx}`] ? 
+                                                        React.createElement(Icons.CheckCircle, { size: 16 }) : 
+                                                        React.createElement(Icons.Circle, { size: 16 })
+                                                    }
+                                                </button>
+                                                {snack}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
+                            
+                            {showEditMeal === dayKey && customMealPlans[dayKey] && (
+                                <div className="text-center">
+                                    <button
+                                        onClick={() => resetMealPlan(dayKey)}
+                                        className="text-red-600 text-sm"
+                                    >
+                                        Reset to Default Meal Plan
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         
                         <div className="flex gap-2">
@@ -506,8 +669,9 @@
             };
 
             const renderGroceryTab = () => {
+                const allGroceryItems = getAllGroceryItems();
                 const completedItems = Object.values(groceryChecklist).filter(Boolean).length;
-                const totalItems = groceryList.reduce((sum, category) => sum + category.items.length, 0);
+                const totalItems = allGroceryItems.reduce((sum, category) => sum + category.items.length, 0);
                 
                 return (
                     <div className="space-y-6">
@@ -524,32 +688,109 @@
                             </div>
                         </div>
                         
-                        {groceryList.map(category => (
+                        {allGroceryItems.map(category => (
                             <div key={category.category} className="border rounded-lg overflow-hidden">
-                                <div className="bg-gray-50 px-4 py-3 border-b">
+                                <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
                                     <h4 className="font-medium text-gray-800">{category.category}</h4>
+                                    {category.category === "Custom Items" && (
+                                        <button
+                                            onClick={() => setShowAddGroceryItem(true)}
+                                            className="text-blue-600 text-sm flex items-center"
+                                        >
+                                            <Icons.Plus size={14} className="mr-1" />
+                                            Add Item
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="p-4 space-y-2">
                                     {category.items.map(item => {
                                         const key = `${category.category}-${item}`;
                                         const isChecked = groceryChecklist[key];
+                                        const isCustom = category.category === "Custom Items";
+                                        
                                         return (
                                             <div key={item} className="flex items-center">
                                                 <button
                                                     onClick={() => toggleGroceryItem(category.category, item)}
                                                     className="text-green-600 mr-3"
                                                 >
-                                                    {isChecked ? <Icons.CheckCircle size={20} /> : <Icons.Circle size={20} />}
+                                                    {isChecked ? 
+                                                        React.createElement(Icons.CheckCircle, { size: 20 }) : 
+                                                        React.createElement(Icons.Circle, { size: 20 })
+                                                    }
                                                 </button>
-                                                <span className={`text-sm ${isChecked ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                                                <span className={`flex-1 text-sm ${isChecked ? 'line-through text-gray-400' : 'text-gray-700'}`}>
                                                     {item}
                                                 </span>
+                                                {isCustom && (
+                                                    <button
+                                                        onClick={() => removeCustomGroceryItem(item)}
+                                                        className="text-red-600 ml-2"
+                                                    >
+                                                        <Icons.X size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                         );
                                     })}
+                                    
+                                    {category.category !== "Custom Items" && category.items.length === 0 && (
+                                        <p className="text-gray-500 text-sm italic">No items in this category</p>
+                                    )}
                                 </div>
                             </div>
                         ))}
+                        
+                        {/* Add Custom Item Modal */}
+                        {showAddGroceryItem && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white p-6 rounded-lg w-80 mx-4">
+                                    <h3 className="font-semibold mb-4">Add Custom Grocery Item</h3>
+                                    <form onSubmit={(e) => {
+                                        e.preventDefault();
+                                        const formData = new FormData(e.target);
+                                        addCustomGroceryItem(formData.get('item'));
+                                    }}>
+                                        <input
+                                            name="item"
+                                            type="text"
+                                            placeholder="Enter item name..."
+                                            className="w-full p-2 border rounded mb-4"
+                                            autoFocus
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="submit"
+                                                className="flex-1 bg-blue-500 text-white py-2 rounded"
+                                            >
+                                                Add Item
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowAddGroceryItem(false)}
+                                                className="flex-1 bg-gray-300 py-2 rounded"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Add Custom Items section if it doesn't exist */}
+                        {!allGroceryItems.find(cat => cat.category === "Custom Items") && (
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                                <p className="text-gray-500 mb-2">Add your own grocery items</p>
+                                <button
+                                    onClick={() => setShowAddGroceryItem(true)}
+                                    className="text-blue-600 flex items-center justify-center"
+                                >
+                                    <Icons.Plus size={16} className="mr-1" />
+                                    Add Custom Item
+                                </button>
+                            </div>
+                        )}
                     </div>
                 );
             };
