@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FODMAP Tracker</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
+        .container { max-width: 400px; margin: 0 auto; background: white; min-height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { Calendar, CheckCircle, Circle, Plus, Minus, Book, ShoppingCart, Target, TrendingUp } = lucide;
+
+        const FODMAPTrackerApp = () => {
+            const [currentPhase, setCurrentPhase] = useState('elimination');
+            const [currentWeek, setCurrentWeek] = useState(1);
+            const [currentDay, setCurrentDay] = useState(1);
+            const [symptoms, setSymptoms] = useState({});
+            const [completedMeals, setCompletedMeals] = useState({});
+            const [groceryChecklist, setGroceryChecklist] = useState({});
+            const [activeTab, setActiveTab] = useState('today');
+
+            // Sample meal plans for each day
+            const mealPlans = {
+                1: {
+                    breakfast: "Gluten-free oatmeal with blueberries, chia seeds, and oat milk",
+                    lunch: "Grilled chicken salad with spinach, carrots, cucumber, bell peppers, olive oil dressing",
+                    dinner: "Baked salmon with roasted zucchini and quinoa",
+                    snacks: ["Rice cake with tahini", "Orange slices"]
+                },
+                2: {
+                    breakfast: "Scrambled eggs with spinach and chives, gluten-free toast",
+                    lunch: "Tuna salad over mixed greens with tomatoes",
+                    dinner: "Stir-fried tofu with bok choy, carrots, and brown rice",
+                    snacks: ["Lactose-free yogurt with strawberries", "Small handful of sunflower seeds"]
+                },
+                3: {
+                    breakfast: "Smoothie with spinach, banana, blueberries, oat milk, chia seeds",
+                    lunch: "Quinoa bowl with grilled chicken, roasted bell peppers, and cucumber",
+                    dinner: "Turkey meatballs with zucchini noodles and tomato sauce",
+                    snacks: ["Rice cakes with sunflower seed butter", "Grapes"]
+                },
+                4: {
+                    breakfast: "Lactose-free yogurt with kiwi and a sprinkle of oats",
+                    lunch: "Salmon salad with mixed greens, carrots, and olive oil dressing",
+                    dinner: "Baked chicken breast with roasted sweet potato and green beans",
+                    snacks: ["Orange", "Small portion of pumpkin seeds"]
+                },
+                5: {
+                    breakfast: "Eggs cooked in coconut oil with spinach and tomatoes",
+                    lunch: "Tofu stir-fry with bell peppers, carrots, and brown rice",
+                    dinner: "Grilled salmon with quinoa and steamed vegetables",
+                    snacks: ["Banana with tahini", "Rice cake"]
+                },
+                6: {
+                    breakfast: "Gluten-free oatmeal with strawberries and sunflower seeds",
+                    lunch: "Chicken and vegetable soup (homemade with allowed vegetables)",
+                    dinner: "Baked cod with roasted potatoes and carrots",
+                    snacks: ["Lactose-free yogurt with kiwi", "Grapes"]
+                },
+                7: {
+                    breakfast: "Smoothie bowl with banana, berries, oat milk, topped with oats",
+                    lunch: "Quinoa salad with cucumber, tomatoes, bell peppers, and olive oil dressing",
+                    dinner: "Turkey stir-fry with zucchini, bok choy, and rice",
+                    snacks: ["Orange", "Rice cake with sunflower seed butter"]
+                }
+            };
+
+            const groceryList = [
+                { category: "Proteins", items: ["Salmon fillets (6 portions)", "Chicken breast (2 lbs)", "Eggs (2 dozen)", "Firm tofu (2 blocks)", "Canned tuna in water (4 cans)", "Ground turkey (1 lb)"] },
+                { category: "Grains & Starches", items: ["Brown rice (2 lbs)", "Quinoa (1 lb)", "Gluten-free oats", "Rice cakes", "Gluten-free bread", "Sweet potatoes (4)", "Regular potatoes (3 lbs)"] },
+                { category: "Vegetables", items: ["Spinach (2 bags)", "Carrots (2 lbs)", "Bell peppers (6)", "Zucchini (4)", "Cucumber (3)", "Tomatoes (6)", "Green beans (1 lb)", "Bok choy (2 heads)"] },
+                { category: "Fruits", items: ["Blueberries (2 containers)", "Strawberries (2 containers)", "Oranges (6)", "Bananas (6)", "Grapes (1 lb)", "Kiwi (4)", "Lemons (4)"] },
+                { category: "Pantry", items: ["Olive oil", "Coconut oil", "Oat milk", "Lactose-free yogurt", "Aged cheddar cheese", "Tahini", "Sunflower seed butter", "Sunflower seeds", "Pumpkin seeds"] }
+            ];
+
+            const reintroductionPhases = [
+                { week: 4, name: "Fructans (Wheat)", foods: ["2 slices wheat bread", "1 cup wheat pasta", "2 wheat crackers"] },
+                { week: 5, name: "Excess Fructose", foods: ["1 large apple", "2 tsp honey", "1/2 mango"] },
+                { week: 6, name: "Lactose", foods: ["1 cup regular milk", "1 container yogurt", "1 slice soft cheese"] },
+                { week: 7, name: "Polyols", foods: ["1/4 avocado", "6 cherries", "Handful cashews"] },
+                { week: 8, name: "GOS", foods: ["1/4 cup chickpeas", "1/4 cup lentils", "10 almonds"] },
+                { week: 9, name: "Fructans (Vegetables)", foods: ["1 clove garlic", "1/4 onion", "1 cup asparagus"] }
+            ];
+
+            const symptomCategories = [
+                "Bloating",
+                "Gas",
+                "Abdominal Pain",
+                "Bowel Changes",
+                "Energy Levels",
+                "Mood",
+                "Pelvic Pain",
+                "Sleep Quality"
+            ];
+
+            const toggleGroceryItem = (category, item) => {
+                const key = `${category}-${item}`;
+                setGroceryChecklist(prev => ({
+                    ...prev,
+                    [key]: !prev[key]
+                }));
+            };
+
+            const toggleMeal = (mealType) => {
+                const key = `day${currentDay}-${mealType}`;
+                setCompletedMeals(prev => ({
+                    ...prev,
+                    [key]: !prev[key]
+                }));
+            };
+
+            const updateSymptom = (symptom, value) => {
+                const key = `day${currentDay}-${symptom}`;
+                setSymptoms(prev => ({
+                    ...prev,
+                    [key]: value
+                }));
+            };
+
+            const getSymptomColor = (value) => {
+                if (value <= 2) return 'text-green-600 bg-green-50';
+                if (value <= 3) return 'text-yellow-600 bg-yellow-50';
+                return 'text-red-600 bg-red-50';
+            };
+
+            const getCurrentDayMeals = () => {
+                const dayKey = ((currentDay - 1) % 7) + 1;
+                return mealPlans[dayKey] || mealPlans[1];
+            };
+
+            const renderTodayTab = () => {
+                const meals = getCurrentDayMeals();
+                return React.createElement('div', { className: 'space-y-6' }, [
+                    React.createElement('div', { key: 'header', className: 'bg-blue-50 p-4 rounded-lg' }, [
+                        React.createElement('h3', { key: 'title', className: 'font-semibold text-blue-900 mb-2' }, 
+                            `${currentPhase === 'elimination' ? 'Elimination Phase' : 'Reintroduction Phase'} - Week ${currentWeek}, Day ${currentDay}`
+                        ),
+                        React.createElement('p', { key: 'subtitle', className: 'text-blue-700 text-sm' },
+                            currentPhase === 'elimination' 
+                                ? "Focus on eating only low-FODMAP foods and tracking symptoms"
+                                : `Testing: ${reintroductionPhases[currentWeek - 4]?.name || 'Complete'}`
+                        )
+                    ]),
+                    React.createElement('div', { key: 'meals', className: 'space-y-4' }, [
+                        React.createElement('h3', { key: 'mealsTitle', className: 'font-semibold text-gray-800' }, "Today's Meals"),
+                        ...['breakfast', 'lunch', 'dinner'].map(mealType => 
+                            React.createElement('div', { key: mealType, className: 'border rounded-lg p-4' }, [
+                                React.createElement('div', { key: 'mealHeader', className: 'flex items-center justify-between mb-2' }, [
+                                    React.createElement('h4', { key: 'mealTitle', className: 'font-medium capitalize text-gray-700' }, mealType),
+                                    React.createElement('button', {
+                                        key: 'checkButton',
+                                        onClick: () => toggleMeal(mealType),
+                                        className: 'text-green-600'
+                                    }, completedMeals[`day${currentDay}-${mealType}`] ? 
+                                        React.createElement(CheckCircle, { size: 20 }) : 
+                                        React.createElement(Circle, { size: 20 })
+                                    )
+                                ]),
+                                React.createElement('p', { key: 'mealDesc', className: 'text-sm text-gray-600' }, meals[mealType])
+                            ])
+                        ),
+                        React.createElement('div', { key: 'snacks', className: 'border rounded-lg p-4' }, [
+                            React.createElement('h4', { key: 'snacksTitle', className: 'font-medium text-gray-700 mb-2' }, 'Snacks'),
+                            React.createElement('ul', { key: 'snacksList', className: 'text-sm text-gray-600 space-y-1' },
+                                meals.snacks?.map((snack, idx) => 
+                                    React.createElement('li', { key: idx, className: 'flex items-center' }, [
+                                        React.createElement('button', {
+                                            key: 'snackButton',
+                                            onClick: () => toggleMeal(`snack${idx}`),
+                                            className: 'text-green-600 mr-2'
+                                        }, completedMeals[`day${currentDay}-snack${idx}`] ? 
+                                            React.createElement(CheckCircle, { size: 16 }) : 
+                                            React.createElement(Circle, { size: 16 })
+                                        ),
+                                        snack
+                                    ])
+                                )
+                            )
+                        ])
+                    ]),
+                    React.createElement('div', { key: 'navigation', className: 'flex gap-2' }, [
+                        React.createElement('button', {
+                            key: 'prevDay',
+                            onClick: () => setCurrentDay(Math.max(1, currentDay - 1)),
+                            className: 'flex items-center px-3 py-2 bg-gray-100 rounded-lg text-sm',
+                            disabled: currentDay === 1
+                        }, [React.createElement(Minus, { key: 'minus', size: 16, className: 'mr-1' }), ' Previous Day']),
+                        React.createElement('button', {
+                            key: 'nextDay',
+                            onClick: () => setCurrentDay(currentDay + 1),
+                            className: 'flex items-center px-3 py-2 bg-blue-500 text-white rounded-lg text-sm'
+                        }, ['Next Day ', React.createElement(Plus, { key: 'plus', size: 16, className: 'ml-1' })])
+                    ])
+                ]);
+            };
+
+            const renderSymptomsTab = () => {
+                return React.createElement('div', { className: 'space-y-6' }, [
+                    React.createElement('div', { key: 'header', className: 'bg-yellow-50 p-4 rounded-lg' }, [
+                        React.createElement('h3', { key: 'title', className: 'font-semibold text-yellow-900 mb-2' }, 'Daily Symptom Tracking'),
+                        React.createElement('p', { key: 'subtitle', className: 'text-yellow-700 text-sm' }, 'Rate each symptom from 1 (none) to 5 (severe)')
+                    ]),
+                    React.createElement('div', { key: 'symptoms', className: 'space-y-4' },
+                        symptomCategories.map(symptom => {
+                            const currentValue = symptoms[`day${currentDay}-${symptom}`] || 0;
+                            return React.createElement('div', { key: symptom, className: 'border rounded-lg p-4' }, [
+                                React.createElement('div', { key: 'symptomHeader', className: 'flex justify-between items-center mb-3' }, [
+                                    React.createElement('h4', { key: 'symptomTitle', className: 'font-medium text-gray-700' }, symptom),
+                                    React.createElement('span', { 
+                                        key: 'symptomValue', 
+                                        className: `px-2 py-1 rounded text-sm ${getSymptomColor(currentValue)}` 
+                                    }, currentValue || 'Not rated')
+                                ]),
+                                React.createElement('div', { key: 'symptomButtons', className: 'flex gap-2' },
+                                    [1, 2, 3, 4, 5].map(value => 
+                                        React.createElement('button', {
+                                            key: value,
+                                            onClick: () => updateSymptom(symptom, value),
+                                            className: `w-10 h-10 rounded-full border-2 text-sm font-medium ${
+                                                currentValue === value
+                                                    ? 'bg-blue-500 text-white border-blue-500'
+                                                    : 'bg-white text-gray-600 border-gray-300 hover:border-blue-300'
+                                            }`
+                                        }, value)
+                                    )
+                                )
+                            ]);
+                        })
+                    )
+                ]);
+            };
+
+            const renderGroceryTab = () => {
+                const completedItems = Object.values(groceryChecklist).filter(Boolean).length;
+                const totalItems = groceryList.reduce((sum, category) => sum + category.items.length, 0);
+                
+                return React.createElement('div', { className: 'space-y-6' }, [
+                    React.createElement('div', { key: 'header', className: 'bg-green-50 p-4 rounded-lg' }, [
+                        React.createElement('h3', { key: 'title', className: 'font-semibold text-green-900 mb-2' }, `Grocery List - Week ${currentWeek}`),
+                        React.createElement('div', { key: 'progress', className: 'flex items-center justify-between' }, [
+                            React.createElement('p', { key: 'progressText', className: 'text-green-700 text-sm' }, `Progress: ${completedItems}/${totalItems} items`),
+                            React.createElement('div', { key: 'progressBar', className: 'w-16 h-2 bg-green-200 rounded-full overflow-hidden' },
+                                React.createElement('div', {
+                                    className: 'h-full bg-green-500 transition-all duration-300',
+                                    style: { width: `${(completedItems / totalItems) * 100}%` }
+                                })
+                            )
+                        ])
+                    ]),
+                    ...groceryList.map(category => 
+                        React.createElement('div', { key: category.category, className: 'border rounded-lg overflow-hidden' }, [
+                            React.createElement('div', { key: 'categoryHeader', className: 'bg-gray-50 px-4 py-3 border-b' },
+                                React.createElement('h4', { className: 'font-medium text-gray-800' }, category.category)
+                            ),
+                            React.createElement('div', { key: 'categoryItems', className: 'p-4 space-y-2' },
+                                category.items.map(item => {
+                                    const key = `${category.category}-${item}`;
+                                    const isChecked = groceryChecklist[key];
+                                    return React.createElement('div', { key: item, className: 'flex items-center' }, [
+                                        React.createElement('button', {
+                                            key: 'itemButton',
+                                            onClick: () => toggleGroceryItem(category.category, item),
+                                            className: 'text-green-600 mr-3'
+                                        }, isChecked ? 
+                                            React.createElement(CheckCircle, { size: 20 }) : 
+                                            React.createElement(Circle, { size: 20 })
+                                        ),
+                                        React.createElement('span', {
+                                            key: 'itemText',
+                                            className: `text-sm ${isChecked ? 'line-through text-gray-400' : 'text-gray-700'}`
+                                        }, item)
+                                    ]);
+                                })
+                            )
+                        ])
+                    )
+                ]);
+            };
+
+            const renderPhaseTab = () => {
+                if (currentPhase === 'elimination') {
+                    return React.createElement('div', { className: 'space-y-6' }, [
+                        React.createElement('div', { key: 'header', className: 'bg-purple-50 p-4 rounded-lg' }, [
+                            React.createElement('h3', { key: 'title', className: 'font-semibold text-purple-900 mb-2' }, '3-Week Elimination Phase'),
+                            React.createElement('p', { key: 'subtitle', className: 'text-purple-700 text-sm mb-3' }, 'Avoid all high-FODMAP foods. Focus on healing and establishing a baseline.'),
+                            React.createElement('div', { key: 'weekNav', className: 'flex gap-2' }, [
+                                React.createElement('button', {
+                                    key: 'prevWeek',
+                                    onClick: () => setCurrentWeek(Math.max(1, currentWeek - 1)),
+                                    className: 'px-3 py-1 bg-purple-100 text-purple-700 rounded text-sm',
+                                    disabled: currentWeek === 1
+                                }, `← Week ${Math.max(1, currentWeek - 1)}`),
+                                React.createElement('span', { key: 'currentWeek', className: 'px-3 py-1 bg-purple-500 text-white rounded text-sm' }, `Week ${currentWeek}`),
+                                React.createElement('button', {
+                                    key: 'nextWeek',
+                                    onClick: () => setCurrentWeek(Math.min(3, currentWeek + 1)),
+                                    className: 'px-3 py-1 bg-purple-100 text-purple-700 rounded text-sm',
+                                    disabled: currentWeek === 3
+                                }, `Week ${Math.min(3, currentWeek + 1)} →`)
+                            ])
+                        ]),
+                        currentWeek === 3 ? React.createElement('div', { key: 'reintroButton', className: 'border-2 border-dashed border-blue-300 p-4 rounded-lg text-center' }, [
+                            React.createElement('h4', { key: 'readyTitle', className: 'font-medium text-blue-700 mb-2' }, 'Ready for Reintroduction?'),
+                            React.createElement('p', { key: 'readyText', className: 'text-sm text-blue-600 mb-3' }, 'Complete Week 3 and ensure symptoms are stable before starting reintroduction.'),
+                            React.createElement('button', {
+                                key: 'startReintro',
+                                onClick: () => {
+                                    setCurrentPhase('reintroduction');
+                                    setCurrentWeek(4);
+                                },
+                                className: 'px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium'
+                            }, 'Start Reintroduction Phase')
+                        ]) : null
+                    ]);
+                }
+
+                return React.createElement('div', { className: 'space-y-6' }, [
+                    React.createElement('div', { key: 'header', className: 'bg-orange-50 p-4 rounded-lg' }, [
+                        React.createElement('h3', { key: 'title', className: 'font-semibold text-orange-900 mb-2' }, 'Reintroduction Phase'),
+                        React.createElement('p', { key: 'subtitle', className: 'text-orange-700 text-sm' }, 'Systematically test each FODMAP group to identify your personal triggers.')
+                    ]),
+                    ...reintroductionPhases.map(phase => 
+                        React.createElement('div', {
+                            key: phase.week,
+                            className: `border rounded-lg p-4 ${currentWeek === phase.week ? 'border-orange-300 bg-orange-50' : ''}`
+                        }, [
+                            React.createElement('div', { key: 'phaseHeader', className: 'flex justify-between items-center mb-3' }, [
+                                React.createElement('h4', { key: 'phaseTitle', className: 'font-medium text-gray-800' }, `Week ${phase.week}: ${phase.name}`),
+                                currentWeek === phase.week ? React.createElement('span', { key: 'currentBadge', className: 'px-2 py-1 bg-orange-500 text-white text-xs rounded' }, 'Current') : null
+                            ]),
+                            React.createElement('div', { key: 'phaseFoods', className: 'space-y-2' },
+                                phase.foods.map((food, idx) => 
+                                    React.createElement('div', { key: idx, className: 'text-sm text-gray-600' }, `Day ${idx + 1}: ${food}`)
+                                )
+                            ),
+                            currentWeek !== phase.week ? React.createElement('button', {
+                                key: 'switchWeek',
+                                onClick: () => setCurrentWeek(phase.week),
+                                className: 'mt-2 text-sm text-blue-600 hover:text-blue-800'
+                            }, 'Switch to this week →') : null
+                        ])
+                    )
+                ]);
+            };
+
+            return React.createElement('div', { className: 'container' }, [
+                // Header
+                React.createElement('div', { key: 'header', className: 'bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4' }, [
+                    React.createElement('h1', { key: 'title', className: 'text-xl font-bold' }, 'FODMAP Tracker'),
+                    React.createElement('p', { key: 'subtitle', className: 'text-blue-100 text-sm' }, 'PCOS • Endometriosis • IBS Support')
+                ]),
+
+                // Tab Navigation
+                React.createElement('div', { key: 'tabs', className: 'flex border-b bg-white sticky top-0 z-10' },
+                    [
+                        { id: 'today', label: 'Today', icon: Calendar },
+                        { id: 'symptoms', label: 'Symptoms', icon: TrendingUp },
+                        { id: 'grocery', label: 'Grocery', icon: ShoppingCart },
+                        { id: 'phase', label: 'Phase', icon: Target }
+                    ].map(tab => {
+                        const Icon = tab.icon;
+                        return React.createElement('button', {
+                            key: tab.id,
+                            onClick: () => setActiveTab(tab.id),
+                            className: `flex-1 flex flex-col items-center py-3 text-xs ${
+                                activeTab === tab.id
+                                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`
+                        }, [
+                            React.createElement(Icon, { key: 'icon', size: 20, className: 'mb-1' }),
+                            tab.label
+                        ]);
+                    })
+                ),
+
+                // Content
+                React.createElement('div', { key: 'content', className: 'p-4 pb-20' }, [
+                    activeTab === 'today' && renderTodayTab(),
+                    activeTab === 'symptoms' && renderSymptomsTab(),
+                    activeTab === 'grocery' && renderGroceryTab(),
+                    activeTab === 'phase' && renderPhaseTab()
+                ])
+            ]);
+        };
+
+        ReactDOM.render(React.createElement(FODMAPTrackerApp), document.getElementById('root'));
+    </script>
+</body>
+</html>
