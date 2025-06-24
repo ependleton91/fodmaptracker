@@ -151,6 +151,8 @@
             const [customMealPlans, setCustomMealPlans] = useState({});
             const [showAddGroceryItem, setShowAddGroceryItem] = useState(false);
             const [showEditMeal, setShowEditMeal] = useState(null);
+            const [editingGroceryCategory, setEditingGroceryCategory] = useState(null);
+            const [showSnackSelector, setShowSnackSelector] = useState(null);
 
             // Load data from localStorage
             useEffect(() => {
@@ -246,6 +248,97 @@
                 { category: "Pantry", items: ["Olive oil", "Coconut oil", "Oat milk", "Lactose-free yogurt", "Aged cheddar cheese", "Tahini", "Sunflower seed butter", "Sunflower seeds", "Pumpkin seeds"] }
             ];
 
+            // FODMAP-approved food bank organized by category
+            const fodmapFoodBank = {
+                "Proteins": [
+                    "Salmon fillets", "Chicken breast", "Ground chicken", "Chicken thighs", "Turkey breast", "Ground turkey",
+                    "Eggs", "Egg whites", "Firm tofu", "Tempeh", "Canned tuna in water", "Canned salmon", "Fresh cod", 
+                    "Fresh halibut", "Shrimp", "Scallops", "Mussels", "Lean beef", "Lean pork", "Lamb", "Duck breast",
+                    "Cottage cheese (lactose-free)", "Greek yogurt (lactose-free)", "Aged cheddar cheese", 
+                    "Swiss cheese", "Parmesan cheese", "Brie cheese", "Feta cheese"
+                ],
+                "Grains & Starches": [
+                    "Brown rice", "White rice", "Quinoa", "Gluten-free oats", "Rice cakes", "Gluten-free bread",
+                    "Gluten-free pasta", "Rice noodles", "Buckwheat", "Millet", "Amaranth", "Corn tortillas",
+                    "Gluten-free crackers", "Rice cereal", "Corn flakes", "Sweet potatoes", "Regular potatoes",
+                    "Baby potatoes", "Russet potatoes", "Yukon potatoes", "Plantain", "Polenta", "Rice flour",
+                    "Potato starch", "Tapioca flour", "Corn starch"
+                ],
+                "Vegetables": [
+                    "Spinach", "Kale", "Arugula", "Lettuce", "Mixed greens", "Carrots", "Baby carrots",
+                    "Bell peppers (red)", "Bell peppers (yellow)", "Bell peppers (green)", "Zucchini", "Yellow squash",
+                    "Cucumber", "Tomatoes", "Cherry tomatoes", "Roma tomatoes", "Green beans", "Bok choy",
+                    "Swiss chard", "Collard greens", "Eggplant", "Radishes", "Turnips", "Parsnips", "Rutabaga",
+                    "Cabbage", "Red cabbage", "Napa cabbage", "Broccoli (small portions)", "Cauliflower (small portions)",
+                    "Bean sprouts", "Bamboo shoots", "Water chestnuts", "Celery", "Fennel", "Chives", "Scallion greens"
+                ],
+                "Fruits": [
+                    "Blueberries", "Strawberries", "Raspberries", "Blackberries", "Oranges", "Mandarins", "Lemons",
+                    "Limes", "Bananas (firm)", "Kiwi", "Grapes (green)", "Grapes (red)", "Cantaloupe", "Honeydew",
+                    "Pineapple", "Papaya", "Dragon fruit", "Passion fruit", "Cranberries (fresh)", "Rhubarb",
+                    "Clementines", "Tangerines", "Grapefruit"
+                ],
+                "Pantry": [
+                    "Olive oil", "Coconut oil", "Avocado oil", "Sesame oil", "Sunflower oil", "Rice vinegar",
+                    "Apple cider vinegar", "Balsamic vinegar", "Coconut milk", "Almond milk", "Oat milk",
+                    "Lactose-free milk", "Lactose-free yogurt", "Tahini", "Sunflower seed butter", "Pumpkin seed butter",
+                    "Maple syrup", "Rice malt syrup", "Coconut sugar", "Brown sugar", "Sea salt", "Black pepper",
+                    "Turmeric", "Ginger (fresh)", "Basil (fresh)", "Oregano", "Thyme", "Rosemary", "Paprika",
+                    "Cumin", "Coriander", "Bay leaves", "Vanilla extract", "Coconut flakes", "Chia seeds",
+                    "Flax seeds", "Pumpkin seeds", "Sunflower seeds", "Pine nuts", "Walnuts (small portions)",
+                    "Macadamia nuts", "Pecans (small portions)", "Brazil nuts", "Coconut flour", "Almond flour"
+                ]
+            };
+
+            // FODMAP-approved snacks bank
+            const fodmapSnacksBank = [
+                "Rice cake with tahini",
+                "Rice cake with sunflower seed butter",
+                "Rice cake with almond butter (small amount)",
+                "Orange slices",
+                "Banana (firm, not overripe)",
+                "Blueberry handful",
+                "Strawberry portion (5-10 berries)",
+                "Grapes (small handful)",
+                "Kiwi slices",
+                "Pineapple chunks",
+                "Cantaloupe cubes",
+                "Lactose-free yogurt with berries",
+                "Greek yogurt (lactose-free) with kiwi",
+                "Hard-boiled egg",
+                "Cheese cubes (aged cheddar)",
+                "Swiss cheese slices",
+                "Carrots with tahini dip",
+                "Cucumber slices with hummus (small portion)",
+                "Bell pepper strips",
+                "Cherry tomatoes",
+                "Sunflower seeds (small handful)",
+                "Pumpkin seeds portion",
+                "Walnuts (10-15 pieces max)",
+                "Macadamia nuts (small portion)",
+                "Brazil nuts (2-3 pieces)",
+                "Pine nuts sprinkle",
+                "Chia seed pudding (made with oat milk)",
+                "Coconut yogurt with berries",
+                "Rice crackers (gluten-free)",
+                "Corn tortilla chips (small portion)",
+                "Popcorn (plain, air-popped)",
+                "Dark chocolate (85% cocoa, small square)",
+                "Coconut flakes",
+                "Dried cranberries (small portion)",
+                "Homemade trail mix (safe nuts + seeds)",
+                "Smoothie (spinach, banana, oat milk)",
+                "Green smoothie (kale, kiwi, coconut water)",
+                "Protein smoothie (lactose-free yogurt, berries)",
+                "Celery with sunflower seed butter",
+                "Radish slices with sea salt",
+                "Olives (green or black)",
+                "Seaweed snacks",
+                "Rice paper rolls (veggie-filled)",
+                "Quinoa crackers",
+                "Sweet potato chips (baked)"
+            ];
+
             const reintroductionPhases = [
                 { week: 4, name: "Fructans (Wheat)", foods: ["2 slices wheat bread", "1 cup wheat pasta", "2 wheat crackers"] },
                 { week: 5, name: "Excess Fructose", foods: ["1 large apple", "2 tsp honey", "1/2 mango"] },
@@ -306,32 +399,26 @@
             };
 
             const getAllGroceryItems = () => {
-                // Combine default grocery list with custom items
-                const allItems = [...groceryList];
-                if (customGroceryList.length > 0) {
-                    allItems.push({
-                        category: "Custom Items",
-                        items: customGroceryList
-                    });
-                }
-                return allItems;
+                // Use the original grocery list as the base, but allow customization per category
+                return groceryList.map(category => ({
+                    ...category,
+                    // If this category has been customized, use the custom items, otherwise use defaults
+                    items: customGroceryList[category.category] || category.items
+                }));
             };
 
-            const addCustomGroceryItem = (item) => {
-                if (item.trim()) {
-                    setCustomGroceryList(prev => [...prev, item.trim()]);
-                    setShowAddGroceryItem(false);
-                }
+            const updateGroceryCategory = (categoryName, newItems) => {
+                setCustomGroceryList(prev => ({
+                    ...prev,
+                    [categoryName]: newItems
+                }));
             };
 
-            const removeCustomGroceryItem = (itemToRemove) => {
-                setCustomGroceryList(prev => prev.filter(item => item !== itemToRemove));
-                // Also remove it from the checklist
-                const key = `Custom Items-${itemToRemove}`;
-                setGroceryChecklist(prev => {
-                    const newChecklist = { ...prev };
-                    delete newChecklist[key];
-                    return newChecklist;
+            const resetGroceryCategory = (categoryName) => {
+                setCustomGroceryList(prev => {
+                    const newList = { ...prev };
+                    delete newList[categoryName];
+                    return newList;
                 });
             };
 
@@ -351,6 +438,28 @@
                     delete newPlans[dayKey];
                     return newPlans;
                 });
+            };
+
+            const clearSymptomRating = (symptom) => {
+                const key = `day${currentDay}-${symptom}`;
+                setSymptoms(prev => {
+                    const newSymptoms = { ...prev };
+                    delete newSymptoms[key];
+                    return newSymptoms;
+                });
+            };
+
+            const clearAllDaySymptoms = () => {
+                if (confirm(`Clear all symptom ratings for Day ${currentDay}?`)) {
+                    setSymptoms(prev => {
+                        const newSymptoms = { ...prev };
+                        symptomCategories.forEach(symptom => {
+                            const key = `day${currentDay}-${symptom}`;
+                            delete newSymptoms[key];
+                        });
+                        return newSymptoms;
+                    });
+                }
             };
 
             const getSymptomHistory = () => {
@@ -391,7 +500,7 @@
                     setCurrentPhase('elimination');
                     setCurrentWeek(1);
                     setCurrentDay(1);
-                    setCustomGroceryList([]);
+                    setCustomGroceryList({});
                     setCustomMealPlans({});
                 }
             };
@@ -481,8 +590,20 @@
                                 </div>
                             ))}
                             
-                            <div className="border rounded-lg p-4">
-                                <h4 className="font-medium text-gray-700 mb-2">Snacks</h4>
+            <div className="border rounded-lg p-4">
+                                <div className="flex justify-between items-center mb-2">
+                                    <h4 className="font-medium text-gray-700">Snacks</h4>
+                                    {showEditMeal === dayKey && (
+                                        <button
+                                            onClick={() => setShowSnackSelector(showSnackSelector === dayKey ? null : dayKey)}
+                                            className="text-blue-600 text-sm flex items-center"
+                                        >
+                                            <Icons.Plus size={14} className="mr-1" />
+                                            Add Snack
+                                        </button>
+                                    )}
+                                </div>
+                                
                                 {showEditMeal === dayKey ? (
                                     <div className="space-y-2">
                                         {meals.snacks?.map((snack, idx) => (
@@ -507,16 +628,10 @@
                                                 </button>
                                             </div>
                                         ))}
-                                        <button
-                                            onClick={() => {
-                                                const newSnacks = [...(meals.snacks || []), 'New snack'];
-                                                updateMealPlan(dayKey, 'snacks', newSnacks);
-                                            }}
-                                            className="text-blue-600 text-sm flex items-center"
-                                        >
-                                            <Icons.Plus size={14} className="mr-1" />
-                                            Add Snack
-                                        </button>
+                                        
+                                        {meals.snacks?.length === 0 && (
+                                            <p className="text-gray-500 text-sm italic">No snacks selected</p>
+                                        )}
                                     </div>
                                 ) : (
                                     <ul className="text-sm text-gray-600 space-y-1">
@@ -531,9 +646,46 @@
                                                 {snack}
                                             </li>
                                         ))}
+                                        {(!meals.snacks || meals.snacks.length === 0) && (
+                                            <li className="text-gray-500 text-sm italic">No snacks planned</li>
+                                        )}
                                     </ul>
                                 )}
                             </div>
+                            
+                            {/* FODMAP Snack Selector Modal */}
+                            {showSnackSelector === dayKey && (
+                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                    <div className="bg-white p-6 rounded-lg w-96 mx-4 max-h-96 overflow-hidden flex flex-col">
+                                        <h3 className="font-semibold mb-4">Add FODMAP-Safe Snack</h3>
+                                        <div className="flex-1 overflow-y-auto mb-4">
+                                            <div className="space-y-2">
+                                                {fodmapSnacksBank.map(snack => (
+                                                    <button
+                                                        key={snack}
+                                                        onClick={() => {
+                                                            const currentSnacks = meals.snacks || [];
+                                                            if (!currentSnacks.includes(snack)) {
+                                                                updateMealPlan(dayKey, 'snacks', [...currentSnacks, snack]);
+                                                            }
+                                                            setShowSnackSelector(null);
+                                                        }}
+                                                        className="w-full text-left p-2 border rounded hover:bg-blue-50 text-sm"
+                                                    >
+                                                        {snack}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowSnackSelector(null)}
+                                            className="w-full bg-gray-300 py-2 rounded"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                             
                             {showEditMeal === dayKey && customMealPlans[dayKey] && (
                                 <div className="text-center">
@@ -569,7 +721,16 @@
             const renderSymptomsTab = () => (
                 <div className="space-y-6">
                     <div className="bg-yellow-50 p-4 rounded-lg">
-                        <h3 className="font-semibold text-yellow-900 mb-2">Day {currentDay} Symptom Tracking</h3>
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-semibold text-yellow-900">Day {currentDay} Symptom Tracking</h3>
+                            <button
+                                onClick={clearAllDaySymptoms}
+                                className="text-red-600 text-sm flex items-center"
+                            >
+                                <Icons.X size={14} className="mr-1" />
+                                Clear All
+                            </button>
+                        </div>
                         <p className="text-yellow-700 text-sm">Rate each symptom from 1 (none) to 5 (severe)</p>
                     </div>
                     
@@ -580,9 +741,19 @@
                                 <div key={symptom} className="border rounded-lg p-4">
                                     <div className="flex justify-between items-center mb-3">
                                         <h4 className="font-medium text-gray-700">{symptom}</h4>
-                                        <span className={`px-2 py-1 rounded text-sm ${getSymptomColor(currentValue)}`}>
-                                            {currentValue || 'Not rated'}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-2 py-1 rounded text-sm ${getSymptomColor(currentValue)}`}>
+                                                {currentValue || 'Not rated'}
+                                            </span>
+                                            {currentValue > 0 && (
+                                                <button
+                                                    onClick={() => clearSymptomRating(symptom)}
+                                                    className="text-red-600"
+                                                >
+                                                    <Icons.X size={14} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="flex gap-2">
                                         {[1, 2, 3, 4, 5].map(value => (
@@ -692,105 +863,109 @@
                             <div key={category.category} className="border rounded-lg overflow-hidden">
                                 <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
                                     <h4 className="font-medium text-gray-800">{category.category}</h4>
-                                    {category.category === "Custom Items" && (
-                                        <button
-                                            onClick={() => setShowAddGroceryItem(true)}
-                                            className="text-blue-600 text-sm flex items-center"
-                                        >
-                                            <Icons.Plus size={14} className="mr-1" />
-                                            Add Item
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => setEditingGroceryCategory(
+                                            editingGroceryCategory === category.category ? null : category.category
+                                        )}
+                                        className="text-blue-600 text-sm flex items-center"
+                                    >
+                                        <Icons.Edit size={14} className="mr-1" />
+                                        {editingGroceryCategory === category.category ? 'Done' : 'Edit'}
+                                    </button>
                                 </div>
-                                <div className="p-4 space-y-2">
-                                    {category.items.map(item => {
-                                        const key = `${category.category}-${item}`;
-                                        const isChecked = groceryChecklist[key];
-                                        const isCustom = category.category === "Custom Items";
-                                        
-                                        return (
-                                            <div key={item} className="flex items-center">
-                                                <button
-                                                    onClick={() => toggleGroceryItem(category.category, item)}
-                                                    className="text-green-600 mr-3"
-                                                >
-                                                    {isChecked ? 
-                                                        React.createElement(Icons.CheckCircle, { size: 20 }) : 
-                                                        React.createElement(Icons.Circle, { size: 20 })
-                                                    }
-                                                </button>
-                                                <span className={`flex-1 text-sm ${isChecked ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                                                    {item}
-                                                </span>
-                                                {isCustom && (
-                                                    <button
-                                                        onClick={() => removeCustomGroceryItem(item)}
-                                                        className="text-red-600 ml-2"
-                                                    >
-                                                        <Icons.X size={16} />
-                                                    </button>
-                                                )}
+                                
+                                {editingGroceryCategory === category.category ? (
+                                    <div className="p-4">
+                                        <div className="mb-4">
+                                            <h5 className="font-medium text-gray-700 mb-2">Select FODMAP-Safe Items:</h5>
+                                            <div className="max-h-48 overflow-y-auto border rounded p-2 bg-gray-50">
+                                                <div className="grid grid-cols-1 gap-1">
+                                                    {fodmapFoodBank[category.category]?.map(food => {
+                                                        const isSelected = category.items.includes(food);
+                                                        return (
+                                                            <label key={food} className="flex items-center text-sm">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={(e) => {
+                                                                        const currentItems = category.items;
+                                                                        const newItems = e.target.checked
+                                                                            ? [...currentItems, food]
+                                                                            : currentItems.filter(item => item !== food);
+                                                                        updateGroceryCategory(category.category, newItems);
+                                                                    }}
+                                                                    className="mr-2"
+                                                                />
+                                                                {food}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                        );
-                                    })}
-                                    
-                                    {category.category !== "Custom Items" && category.items.length === 0 && (
-                                        <p className="text-gray-500 text-sm italic">No items in this category</p>
-                                    )}
-                                </div>
+                                        </div>
+                                        
+                                        <div className="mb-4">
+                                            <h5 className="font-medium text-gray-700 mb-2">Current List:</h5>
+                                            <div className="space-y-1">
+                                                {category.items.map((item, idx) => (
+                                                    <div key={idx} className="flex items-center justify-between bg-white border rounded px-2 py-1">
+                                                        <span className="text-sm">{item}</span>
+                                                        <button
+                                                            onClick={() => {
+                                                                const newItems = category.items.filter(i => i !== item);
+                                                                updateGroceryCategory(category.category, newItems);
+                                                            }}
+                                                            className="text-red-600"
+                                                        >
+                                                            <Icons.X size={14} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        {customGroceryList[category.category] && (
+                                            <div className="text-center">
+                                                <button
+                                                    onClick={() => resetGroceryCategory(category.category)}
+                                                    className="text-red-600 text-sm"
+                                                >
+                                                    Reset to Default
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="p-4 space-y-2">
+                                        {category.items.map(item => {
+                                            const key = `${category.category}-${item}`;
+                                            const isChecked = groceryChecklist[key];
+                                            
+                                            return (
+                                                <div key={item} className="flex items-center">
+                                                    <button
+                                                        onClick={() => toggleGroceryItem(category.category, item)}
+                                                        className="text-green-600 mr-3"
+                                                    >
+                                                        {isChecked ? 
+                                                            React.createElement(Icons.CheckCircle, { size: 20 }) : 
+                                                            React.createElement(Icons.Circle, { size: 20 })
+                                                        }
+                                                    </button>
+                                                    <span className={`flex-1 text-sm ${isChecked ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                                                        {item}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                        
+                                        {category.items.length === 0 && (
+                                            <p className="text-gray-500 text-sm italic">No items selected for this category</p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ))}
-                        
-                        {/* Add Custom Item Modal */}
-                        {showAddGroceryItem && (
-                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                                <div className="bg-white p-6 rounded-lg w-80 mx-4">
-                                    <h3 className="font-semibold mb-4">Add Custom Grocery Item</h3>
-                                    <form onSubmit={(e) => {
-                                        e.preventDefault();
-                                        const formData = new FormData(e.target);
-                                        addCustomGroceryItem(formData.get('item'));
-                                    }}>
-                                        <input
-                                            name="item"
-                                            type="text"
-                                            placeholder="Enter item name..."
-                                            className="w-full p-2 border rounded mb-4"
-                                            autoFocus
-                                        />
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="submit"
-                                                className="flex-1 bg-blue-500 text-white py-2 rounded"
-                                            >
-                                                Add Item
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowAddGroceryItem(false)}
-                                                className="flex-1 bg-gray-300 py-2 rounded"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        )}
-                        
-                        {/* Add Custom Items section if it doesn't exist */}
-                        {!allGroceryItems.find(cat => cat.category === "Custom Items") && (
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                                <p className="text-gray-500 mb-2">Add your own grocery items</p>
-                                <button
-                                    onClick={() => setShowAddGroceryItem(true)}
-                                    className="text-blue-600 flex items-center justify-center"
-                                >
-                                    <Icons.Plus size={16} className="mr-1" />
-                                    Add Custom Item
-                                </button>
-                            </div>
-                        )}
                     </div>
                 );
             };
